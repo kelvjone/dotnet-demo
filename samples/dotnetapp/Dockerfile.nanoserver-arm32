@@ -1,25 +1,21 @@
+# https://hub.docker.com/_/microsoft-dotnet-core
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0 AS build
+WORKDIR /source
 
-# copy and publish app and libraries
-WORKDIR /app
-COPY dotnetapp/. ./dotnetapp/
-COPY utils/. ./utils/
-WORKDIR /app/dotnetapp
+# copy csproj and restore as distinct layers
+COPY *.csproj .
+RUN dotnet restore
 
 # Trigger registry hive creation to workaround intermittent Windows arm Docker issue
 # https://github.com/dotnet/dotnet-docker/issues/1054
 USER ContainerAdministrator
-RUN dotnet publish -c Release -o out
 
+# copy and publish app and libraries
+COPY *.cs .
+RUN dotnet publish -c release -o /app -r win-arm --self-contained false
 
-# test application -- see: dotnet-docker-unit-testing.md
-FROM build AS testrunner
-WORKDIR /app/tests
-COPY tests/. .
-ENTRYPOINT ["dotnet", "test", "--logger:trx"]
-
-
-FROM mcr.microsoft.com/dotnet/core/runtime:3.0 AS runtime
+# final stage, which will result in generated image
+FROM mcr.microsoft.com/dotnet/core/runtime:3.0-nanoserver-arm32v7
 WORKDIR /app
-COPY --from=build /app/dotnetapp/out ./
-ENTRYPOINT ["dotnet", "dotnetapp.dll"]
+COPY --from=build /app .
+ENTRYPOINT ["dotnetapp"]

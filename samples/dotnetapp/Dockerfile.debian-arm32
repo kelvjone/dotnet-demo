@@ -8,10 +8,10 @@ RUN dotnet restore
 
 # copy and publish app and libraries
 COPY *.cs .
-RUN dotnet publish -c release -o /app -r linux-arm64 --self-contained true /p:PublishTrimmed=true /p:PublishReadyToRun=true
+RUN dotnet publish -c release -o /app -r linux-arm --self-contained false
 
 # final stage, which will result in generated image
-FROM mcr.microsoft.com/dotnet/core/runtime-deps:3.0-buster-slim-arm64v8
+FROM mcr.microsoft.com/dotnet/core/runtime:3.0-buster-slim-arm32v7
 WORKDIR /app
 COPY --from=build /app .
 ENTRYPOINT ["./dotnetapp"]
